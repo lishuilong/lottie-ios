@@ -137,6 +137,61 @@
   [_wrapperLayer addSublayer:_contentsGroup.containerLayer];
 }
 
+/**
+ *  图片压缩到指定大小
+ *  @param targetSize  目标图片的大小
+ *  @param sourceImage 源图片
+ *  @return 目标图片
+ */
+- (UIImage*)imageByScalingAndCroppingForSize:(CGSize)targetSize withSourceImage:(UIImage *)sourceImage
+{
+    UIImage *newImage = nil;
+    CGSize imageSize = sourceImage.size;
+    CGFloat width = imageSize.width;
+    CGFloat height = imageSize.height;
+    CGFloat targetWidth = targetSize.width;
+    CGFloat targetHeight = targetSize.height;
+    CGFloat scaleFactor = 0.0;
+    CGFloat scaledWidth = targetWidth;
+    CGFloat scaledHeight = targetHeight;
+    CGPoint thumbnailPoint = CGPointMake(0.0,0.0);
+    if (CGSizeEqualToSize(imageSize, targetSize) == NO)
+    {
+       CGFloat widthFactor = targetWidth / width;
+       CGFloat heightFactor = targetHeight / height;
+       if (widthFactor > heightFactor)
+           scaleFactor = widthFactor; // scale to fit height
+       else
+           scaleFactor = heightFactor; // scale to fit width
+       scaledWidth= width * scaleFactor;
+       scaledHeight = height * scaleFactor;
+       // center the image
+       if (widthFactor > heightFactor)
+       {
+           thumbnailPoint.y = (targetHeight - scaledHeight) * 0.5;
+       }
+       else if (widthFactor < heightFactor)
+       {
+           thumbnailPoint.x = (targetWidth - scaledWidth) * 0.5;
+       }
+    }
+    UIGraphicsBeginImageContext(targetSize); // this will crop
+    CGRect thumbnailRect = CGRectZero;
+    thumbnailRect.origin = thumbnailPoint;
+    thumbnailRect.size.width= scaledWidth;
+    thumbnailRect.size.height = scaledHeight;
+
+    [sourceImage drawInRect:thumbnailRect];
+    newImage = UIGraphicsGetImageFromCurrentImageContext();
+    if(newImage == nil)
+       NSLog(@"could not scale image");
+
+    //pop the context to get back to the default
+    UIGraphicsEndImageContext();
+
+ return newImage;
+}
+
 #if TARGET_OS_IPHONE || TARGET_OS_SIMULATOR
 
 - (void)_setImageForAsset:(LOTAsset *)asset {
@@ -144,9 +199,29 @@
     UIImage *image;
     if ([asset.imageName hasPrefix:@"data:"]) {
       // Contents look like a data: URL. Ignore asset.imageDirectory and simply load the image directly.
-      NSURL *imageUrl = [NSURL URLWithString:asset.imageName];
-      NSData *imageData = [NSData dataWithContentsOfURL:imageUrl];
-      image = [UIImage imageWithData:imageData];
+//      NSURL *imageUrl = [NSURL URLWithString:asset.imageName];
+//      NSData *imageData = [NSData dataWithContentsOfURL:imageUrl];
+//      image = [UIImage imageWithData:imageData];
+        
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            UIImage *image = nil;
+            NSURL *imageUrl = [NSURL URLWithString:asset.imageName];
+            NSData *imageData = [NSData dataWithContentsOfURL:imageUrl];
+            image = [UIImage imageWithData:imageData];
+            //缩放到百分之40，UI出图3x
+            image = [self imageByScalingAndCroppingForSize:CGSizeMake(image.size.width*0.4, image.size.height*0.4) withSourceImage:image];
+            dispatch_async(dispatch_get_main_queue(), ^{
+                
+                if (image) {
+                  self.wrapperLayer.contents = (__bridge id _Nullable)(image.CGImage);
+                } else {
+                  NSLog(@"%s: Warn: image not found: %@", __PRETTY_FUNCTION__, asset.imageName);
+                }
+            });
+        });
+        
+        return ;
+            
     } else if (asset.rootDirectory.length > 0) {
       NSString *rootDirectory  = asset.rootDirectory;
       if (asset.imageDirectory.length > 0) {
