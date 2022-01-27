@@ -208,8 +208,8 @@
             NSURL *imageUrl = [NSURL URLWithString:asset.imageName];
             NSData *imageData = [NSData dataWithContentsOfURL:imageUrl];
             image = [UIImage imageWithData:imageData];
-            //缩放到百分之40，UI出图3x
-            image = [self imageByScalingAndCroppingForSize:CGSizeMake(image.size.width*0.4, image.size.height*0.4) withSourceImage:image];
+            //缩放到百分之60，UI出图3x
+            image = [self imageByScalingAndCroppingForSize:CGSizeMake(image.size.width*0.6, image.size.height*0.6) withSourceImage:image];
             dispatch_async(dispatch_get_main_queue(), ^{
                 
                 if (image) {
