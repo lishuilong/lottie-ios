@@ -209,7 +209,11 @@
             NSData *imageData = [NSData dataWithContentsOfURL:imageUrl];
             image = [UIImage imageWithData:imageData];
             //缩放到百分之60，UI出图3x
-            image = [self imageByScalingAndCroppingForSize:CGSizeMake(image.size.width*0.6, image.size.height*0.6) withSourceImage:image];
+            if (image.size.width < 400 && image.size.height < 400) {
+                
+            } else {
+                image = [self imageByScalingAndCroppingForSize:CGSizeMake(image.size.width*0.6, image.size.height*0.6) withSourceImage:image];
+            }
             dispatch_async(dispatch_get_main_queue(), ^{
                 
                 if (image) {
